@@ -55,7 +55,7 @@ async function fetchWithRetry(
 
         if (response.status === 429 && attempt < maxRetries - 1) {
             const delay = (attempt + 1) * 5000; // 5s, 10s, 15s
-            console.log(`[CompanyFetcher] Rate limited, retrying in ${delay / 1000}s...`);
+            // console.log(`[CompanyFetcher] Rate limited, retrying in ${delay / 1000}s...`);
             await sleep(delay);
             continue;
         }
@@ -77,7 +77,7 @@ export async function fetchCompanyBrief(
 
     // Trim whitespace from API key (common copy-paste issue)
     config.apiKey = config.apiKey.trim();
-    console.log(`[CompanyFetcher] Using ${config.provider}/${config.model}, key starts with: ${config.apiKey.slice(0, 8)}...`);
+    // console.log(`[CompanyFetcher] Using ${config.provider}/${config.model}, key starts with: ${config.apiKey.slice(0, 8)}...`);
 
     const userMessage = `Company: ${companyName.trim()}\n\nGenerate a concise interview-prep brief for this company.`;
 

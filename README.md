@@ -78,6 +78,10 @@ Enter the API key in TalkSync settings and select your model.
 
 All your data is stored locally on your machine — nothing is sent to the cloud (except API calls to the provider you choose).
 
+### 🛡️ Reliability Features
+- **Auto-Reconnect:** If your internet blips, TalkSync automatically attempts to reconnect to the transcription engine (Deepgram) with exponential backoff.
+- **Crash Protection:** A robust error boundary ensures the app doesn't white-screen if an unexpected error occurs.
+
 ### Where is my data?
 - **Windows:** `%APPDATA%/com.raj.talksync/`
   - `settings.json` — Your API keys, selected provider, opacity

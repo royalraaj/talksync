@@ -77,7 +77,7 @@ export const PracticeSession: React.FC<Props> = ({ resumeText, jobDescription, s
             // Short delay to allow final transcript to settle
             setTimeout(async () => {
                 const finalTranscript = transcriptRef.current; // Read from Ref
-                console.log('Final Transcript:', finalTranscript);
+                // console.log('Final Transcript:', finalTranscript);
 
                 if (!finalTranscript) {
                     setError("No speech detected. Please try again.");

@@ -47,6 +47,8 @@ export class DeepgramClient {
   private onError: ErrorCallback;
   private onStatus: StatusCallback;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryCount = 0;
+  private maxRetries = 5;
 
   constructor(
     apiKey: string,
@@ -85,8 +87,9 @@ export class DeepgramClient {
     this.ws = new WebSocket(url, ['token', this.apiKey]);
 
     this.ws.onopen = () => {
-      console.log('[Deepgram] Connected');
+      // console.log('[Deepgram] Connected');
       this.onStatus('connected');
+      this.retryCount = 0; // Reset retries on successful connection
     };
 
     this.ws.onmessage = (event) => {
@@ -108,17 +111,25 @@ export class DeepgramClient {
 
     this.ws.onerror = (event) => {
       console.error('[Deepgram] WebSocket error:', event);
-      this.onError('WebSocket connection error');
-      this.onStatus('error');
+      // Don't trigger error cb yet, try to reconnect first
     };
 
     this.ws.onclose = (event) => {
-      console.log('[Deepgram] Disconnected:', event.code, event.reason);
+      // console.log('[Deepgram] Disconnected:', event.code, event.reason);
       this.onStatus('disconnected');
 
-      // Auto-reconnect after 2 seconds
-      if (event.code !== 1000) {
-        this.reconnectTimer = setTimeout(() => this.connect(), 2000);
+      // Auto-reconnect if not closed normally (1000) and retries left
+      if (event.code !== 1000 && this.retryCount < this.maxRetries) {
+        const delay = Math.min(1000 * Math.pow(2, this.retryCount), 10000); // Exponential backoff max 10s
+        console.log(`[Deepgram] Reconnecting in ${delay}ms... (Attempt ${this.retryCount + 1}/${this.maxRetries})`);
+
+        this.reconnectTimer = setTimeout(() => {
+          this.retryCount++;
+          this.connect();
+        }, delay);
+      } else if (this.retryCount >= this.maxRetries) {
+        this.onError('Connection lost. Please restart listening.');
+        this.onStatus('error');
       }
     };
   }
@@ -135,6 +146,7 @@ export class DeepgramClient {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    this.retryCount = 0;
     if (this.ws) {
       this.ws.close(1000, 'Client disconnect');
       this.ws = null;

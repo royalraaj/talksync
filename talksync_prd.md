@@ -539,6 +539,10 @@ flowchart TD
 | **Practice Mode** (Mock View) | P2 | 🚧 Planned |
 | File-based data persistence (Tauri FS plugin) | P1 | ✅ Done |
 | localStorage → file migration | P1 | ✅ Done |
+| **Audit Improvements** | | |
+| Global Error Boundary | P0 | ✅ Done |
+| Deepgram Auto-Reconnect (Exponential Backoff) | P1 | ✅ Done |
+| Production Console Cleanup | P1 | ✅ Done |
 
 > [!NOTE]
 > **Scope:** Personal use tool. All interview types supported (behavioral, technical, personal, situational, general).

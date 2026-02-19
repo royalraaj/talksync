@@ -267,7 +267,7 @@ export async function migrateFromLocalStorage(): Promise<void> {
         localStorage.setItem(MIGRATED_FLAG, 'true');
 
         if (didMigrate) {
-            console.log('[SessionStore] Successfully migrated localStorage data to file system');
+            // console.log('[SessionStore] Successfully migrated localStorage data to file system');
         }
     } catch (err) {
         console.error('[SessionStore] Migration from localStorage failed:', err);
