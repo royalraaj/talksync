@@ -6,7 +6,10 @@
 
 **[Download Latest Windows Installer (.exe)](https://github.com/royalraaj/talksync/releases/latest)**
 
-1.  Click the link above.
+*OR, if you just built it locally, you can find the installer at:*
+`src-tauri/target/debug/bundle/nsis/TalkSync_0.2.0_x64-setup.exe`
+
+1.  Get the installer (from link above or local path).
 2.  Download `TalkSync_0.2.0_x64-setup.exe`.
 3.  Run the installer.
 4.  Launch **TalkSync** from your desktop or start menu.
