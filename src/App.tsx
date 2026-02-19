@@ -8,6 +8,7 @@ import SetupPanel, { SessionData } from './components/SetupPanel';
 import Transcript from './components/Transcript';
 import AnswerPanel from './components/AnswerPanel';
 import StatusBar from './components/StatusBar';
+import { ResizableLayout } from './components/ResizableLayout';
 import { useAudioCapture } from './hooks/useAudioCapture';
 import { useTranscription } from './hooks/useTranscription';
 import { useLLM } from './hooks/useLLM';
@@ -334,17 +335,22 @@ function App() {
     <div className="app-container session-mode" style={{ background: `rgba(10, 10, 26, ${settings.opacity})` }}>
       <div className="drag-region" data-tauri-drag-region onMouseDown={handleDrag}></div>
       <div className="session-content">
-        <Transcript lines={lines} interviewerSpeaker={interviewerSpeaker} />
-        <AnswerPanel
-          answer={answer}
-          isGenerating={isGenerating}
-          question={detectedQuestion}
-          error={llmError}
-          confidence={confidence}
-          hints={hints}
-          questionType={questionType}
-          isFollowUp={isFollowUp}
-          onAction={handleQuickAction}
+        <ResizableLayout
+          initialTopHeightPercentage={40}
+          top={<Transcript lines={lines} interviewerSpeaker={interviewerSpeaker} />}
+          bottom={
+            <AnswerPanel
+              answer={answer}
+              isGenerating={isGenerating}
+              question={detectedQuestion}
+              error={llmError}
+              confidence={confidence}
+              hints={hints}
+              questionType={questionType}
+              isFollowUp={isFollowUp}
+              onAction={handleQuickAction}
+            />
+          }
         />
       </div>
       <StatusBar

@@ -1,0 +1,67 @@
+.resizable-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+.resizable-top {
+    overflow: hidden;
+    min-height: 20%;
+    display: flex;
+    flex-direction: column;
+}
+
+.resizable-bottom {
+    overflow: hidden;
+    min-height: 20%;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    /* Ensure it takes remaining space */
+}
+
+/* Custom scrollbar hiding for children if they scroll */
+.resizable-top>*,
+.resizable-bottom>* {
+    scrollbar-width: none;
+}
+
+.resizable-top>*::-webkit-scrollbar,
+.resizable-bottom>*::-webkit-scrollbar {
+    display: none;
+}
+
+.resize-handle {
+    height: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    /* Lighter background for better visibility */
+    cursor: row-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.resize-handle:hover,
+.resize-handle:active {
+    background: rgba(33, 150, 243, 0.4);
+    /* Brighter hover state */
+}
+
+.handle-bar {
+    width: 60px;
+    /* Wider handle */
+    height: 4px;
+    background: rgba(255, 255, 255, 0.4);
+    /* Brighter bar */
+    border-radius: 2px;
+}
+
+.resize-handle:hover .handle-bar {
+    background: rgba(255, 255, 255, 0.5);
+}
