@@ -2,13 +2,16 @@
 
 **TalkSync** is your AI-powered interview assistant. It listens to your interview in real-time and provides smart, context-aware answers based on your resume and job description.
 
-## 🚀 Installation
+## 📥 Download & Install
 
-1.  **Download & Install:**
-    - Navigate to `src-tauri/target/debug/bundle/nsis/` (or `release` if built for production).
-    - Run `TalkSync_0.2.0_x64-setup.exe`
-    - Follow the prompts to install.
-    - Launch **TalkSync** from your Start Menu.
+**[Download Latest Windows Installer (.exe)](https://github.com/royalraaj/talksync/releases/latest)**
+
+1.  Click the link above.
+2.  Download `TalkSync_0.2.0_x64-setup.exe`.
+3.  Run the installer.
+4.  Launch **TalkSync** from your desktop or start menu.
+
+> **Note:** Since this app is not signed with a costly certificate yet, Windows might show a "SmartScreen" warning. Click **"More Info" -> "Run Anyway"** to install.
 
 2.  **Initial Launch:**
     - The app will open as a transparent overlay in "Home" mode.
