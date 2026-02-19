@@ -5,6 +5,7 @@
 ## 🚀 Installation
 
 1.  **Download & Install:**
+    - Navigate to `src-tauri/target/debug/bundle/nsis/` (or `release` if built for production).
     - Run `TalkSync_0.2.0_x64-setup.exe`
     - Follow the prompts to install.
     - Launch **TalkSync** from your Start Menu.
