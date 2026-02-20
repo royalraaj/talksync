@@ -4,21 +4,36 @@
 
 ## 📥 Download & Install
 
-**[Download Latest Windows Installer (.exe)](https://github.com/royalraaj/talksync/releases/latest)**
+### Option A: Pre-built Installer (Recommended)
 
-*OR, if you just built it locally, you can find the installer at:*
-`src-tauri/target/debug/bundle/nsis/TalkSync_0.2.0_x64-setup.exe`
-
-1.  Get the installer (from link above or local path).
+1.  **[Download Latest Windows Installer (.exe)](https://github.com/royalraaj/talksync/releases/latest)**
 2.  Download `TalkSync_0.2.0_x64-setup.exe`.
 3.  Run the installer.
 4.  Launch **TalkSync** from your desktop or start menu.
 
 > **Note:** Since this app is not signed with a costly certificate yet, Windows might show a "SmartScreen" warning. Click **"More Info" -> "Run Anyway"** to install.
 
-2.  **Initial Launch:**
-    - The app will open as a transparent overlay in "Home" mode.
-    - Click the **Settings (⚙️)** icon in the top right.
+### Option B: Build from Source (For Developers)
+
+If you want to build the app from source on a new PC:
+
+1.  **Install Prerequisites:** Make sure you have [Node.js](https://nodejs.org/) and [Rust](https://www.rust-lang.org/tools/install) installed.
+2.  **Get the Source Code:** Clone or download the repository from GitHub.
+3.  **Install Dependencies:** Open a terminal in the project folder and run:
+    ```bash
+    npm install
+    ```
+4.  **Build the App:** Run the Tauri build command:
+    ```bash
+    npm run tauri build
+    ```
+    *(Note: The first build will take some time as it downloads and compiles all Rust dependencies.)*
+5.  **Run the Installer:** Once finished, you can find the generated installer at `src-tauri/target/release/bundle/nsis/TalkSync_0.2.0_x64-setup.exe`. Follow steps 3 and 4 from Option A to install it.
+
+### Initial Launch:
+
+1.  The app will open as a transparent overlay in "Home" mode.
+2.  Click the **Settings (⚙️)** icon in the top right.
 
 ## 🔑 key Setup (Required)
 
