@@ -1,6 +1,6 @@
 # TalkSync — Product Requirements Document (PRD)
 
-**Version:** 2.4  
+**Version:** 2.5  
 **Date:** 2026-02-22  
 **Author:** Raj / AI Assistant  
 **Status:** Active
@@ -187,6 +187,7 @@ TalkSync features a strict Freemium paywall governed by a standalone backend ser
 | **Razorpay Checkout** | Users can tap "Purchase Pro" in settings to invoke the Razorpay SDK popup inside the Tauri app window. |
 | **Manual Verification** | If a user purchases on a different device, they can paste their `TS-PRO-XYZ` license key into Settings to instantly unlock PRO features. |
 | **Real-time Activation** | Firestore `onSnapshot` listeners instantly update the UI from FREE to PRO the millisecond the webhook hits the database, requiring zero app reloads. |
+| **Backend Keep-Alive** | The Render Free Tier backend is kept continuously awake via a completely free UptimeRobot 10-minute HTTP ping to the `/health` endpoint. This guarantees instant 0-second Razorpay checkout loads for users. |
 
 ---
 
