@@ -7,7 +7,7 @@
 ### Option A: Pre-built Installer (Recommended)
 
 1.  **[Download Latest Windows Installer (.exe)](https://github.com/royalraaj/talksync/releases/latest)**
-2.  Download `TalkSync_0.2.0_x64-setup.exe`.
+2.  Download `TalkSync_0.3.0_x64-setup.exe`.
 3.  Run the installer.
 4.  Launch **TalkSync** from your desktop or start menu.
 
@@ -28,14 +28,14 @@ If you want to build the app from source on a new PC:
     npm run tauri build
     ```
     *(Note: The first build will take some time as it downloads and compiles all Rust dependencies.)*
-5.  **Run the Installer:** Once finished, you can find the generated installer at `src-tauri/target/release/bundle/nsis/TalkSync_0.2.0_x64-setup.exe`. Follow steps 3 and 4 from Option A to install it.
+5.  **Run the Installer:** Once finished, you can find the generated installer at `src-tauri/target/release/bundle/nsis/TalkSync_0.3.0_x64-setup.exe`. Follow steps 3 and 4 from Option A to install it.
 
 ### Initial Launch:
 
 1.  The app will open as a transparent overlay in "Home" mode.
 2.  Click the **Settings (⚙️)** icon in the top right.
 
-## 🔑 key Setup (Required)
+## 🔑 API Key Setup (Required)
 
 To make TalkSync work, you need two API keys. These are stored locally on your device.
 
