@@ -12,6 +12,9 @@ import { ResizableLayout } from './components/ResizableLayout';
 import { useAudioCapture } from './hooks/useAudioCapture';
 import { useTranscription } from './hooks/useTranscription';
 import { useLLM } from './hooks/useLLM';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from './lib/firebase';
+import AuthScreen from './components/AuthScreen';
 import { LLMConfig } from './lib/llm';
 import {
   GlobalSettings, Session,
@@ -19,6 +22,7 @@ import {
   listSessions, saveSession, deleteSession, createSession,
   migrateFromLocalStorage,
 } from './lib/sessionStore';
+import { getUserSubscription, incrementSessionCount } from './lib/subscription';
 import './App.css';
 
 type Mode = 'home' | 'settings' | 'setup' | 'session';
@@ -39,6 +43,9 @@ function App() {
   const [isVisible, setIsVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Firebase Auth State
+  const [user, authLoading, authError] = useAuthState(auth);
+
   // Async init: migrate old data, then load settings + sessions from disk
   useEffect(() => {
     const init = async () => {
@@ -55,6 +62,14 @@ function App() {
     };
     init();
   }, []);
+
+  // Handle Auth changes (logout resets app state)
+  useEffect(() => {
+    if (!user && !authLoading) {
+      setMode('home');
+      setActiveSession(null);
+    }
+  }, [user, authLoading]);
 
   // Hooks
   const { isCapturing, startCapture, stopCapture } = useAudioCapture();
@@ -157,6 +172,17 @@ function App() {
       session = { ...activeSession, ...data, updatedAt: new Date().toISOString() };
     } else {
       session = createSession(data);
+      // It's a brand new session, increment the user's free tier usage count
+      if (user) {
+        try {
+          const sub = await getUserSubscription(user.uid);
+          if (!sub.isPro) {
+            await incrementSessionCount(user.uid, sub.sessionCount);
+          }
+        } catch (err) {
+          console.error('[Subscription] Failed to increment count:', err);
+        }
+      }
     }
     await saveSession(session);
     setActiveSession(session);
@@ -265,15 +291,29 @@ function App() {
 
   // --- Render ---
 
-  // Show loading state while data loads from disk
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className="app-container setup-mode" style={{ background: 'rgba(10, 10, 26, 0.95)' }}>
         <div className="drag-region" data-tauri-drag-region onMouseDown={handleDrag}>
           <button className="close-btn" onMouseDown={e => e.stopPropagation()} onClick={handleClose} title="Exit">×</button>
         </div>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>
-          Loading...
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>
+          <div>Loading...</div>
+          {authError && <div style={{ color: 'red', marginTop: '8px' }}>Auth Error: {authError.message}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  // Not logged in -> Show Auth Screen
+  if (!user) {
+    return (
+      <div className="app-container setup-mode" style={{ background: 'rgba(10, 10, 26, 0.95)' }}>
+        <div className="drag-region" data-tauri-drag-region onMouseDown={handleDrag}>
+          <button className="close-btn" onMouseDown={e => e.stopPropagation()} onClick={handleClose} title="Exit">×</button>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <AuthScreen onSuccess={() => { }} />
         </div>
       </div>
     );

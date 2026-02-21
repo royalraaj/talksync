@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Session } from '../lib/sessionStore';
+import { auth } from '../lib/firebase';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { getUserSubscription, UserSubscription, FREE_TIER_LIMIT } from '../lib/subscription';
 import './HomeScreen.css';
 
 interface Props {
@@ -17,6 +20,26 @@ const HomeScreen: React.FC<Props> = ({
     onDeleteSession,
     onOpenSettings,
 }) => {
+    const [user] = useAuthState(auth);
+    const [sub, setSub] = useState<UserSubscription | null>(null);
+
+    useEffect(() => {
+        if (user) {
+            getUserSubscription(user.uid).then(setSub).catch(console.error);
+        }
+    }, [user, sessions.length]); // Re-fetch on session changes just in case
+
+    const isLimitReached = sub && !sub.isPro && sub.sessionCount >= FREE_TIER_LIMIT;
+
+    const handleNewSession = () => {
+        if (isLimitReached) {
+            alert(`You've reached the free limit of ${FREE_TIER_LIMIT} sessions. Please upgrade in Settings!`);
+            onOpenSettings();
+        } else {
+            onNewSession();
+        }
+    };
+
     const formatDate = (iso: string) => {
         const d = new Date(iso);
         const now = new Date();
@@ -35,7 +58,7 @@ const HomeScreen: React.FC<Props> = ({
         <div className="home-screen">
             <div className="home-header">
                 <div>
-                    <h1 className="home-title">🎯 TalkSync</h1>
+                    <h1 className="home-title">🎯 TalkSync {sub?.isPro && <span style={{ fontSize: '14px', background: 'gold', color: 'black', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px' }}>PRO</span>}</h1>
                     <p className="home-subtitle">Your AI interview assistant</p>
                 </div>
                 <button className="settings-btn" onClick={onOpenSettings} title="Settings">
@@ -43,8 +66,19 @@ const HomeScreen: React.FC<Props> = ({
                 </button>
             </div>
 
-            <button className="new-session-btn" onClick={onNewSession}>
-                ➕ New Interview Session
+            {sub && !sub.isPro && (
+                <div style={{ background: 'rgba(255, 165, 0, 0.1)', border: '1px solid orange', padding: '12px', borderRadius: '8px', marginBottom: '16px', color: 'orange', fontSize: '13px' }}>
+                    <strong>Free Tier:</strong> You have used {sub.sessionCount} of {FREE_TIER_LIMIT} free sessions.
+                    {isLimitReached && <span> Upgrade to Pro to continue.</span>}
+                </div>
+            )}
+
+            <button
+                className="new-session-btn"
+                onClick={handleNewSession}
+                style={{ opacity: isLimitReached ? 0.5 : 1 }}
+            >
+                {isLimitReached ? '🔒 Upgrade to Pro for More Sessions' : '➕ New Interview Session'}
             </button>
 
             {sessions.length > 0 && (

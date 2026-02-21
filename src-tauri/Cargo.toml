@@ -24,6 +24,7 @@ cpal = "0.15"
 tauri-plugin-http = "2.5.7"
 tauri-plugin-fs = "2.4.5"
 tauri-plugin-shell = "2.3.5"
+tauri-plugin-google-auth = "0.5"
 
 # Windows APIs for stealth mode
 [target.'cfg(target_os = "windows")'.dependencies]

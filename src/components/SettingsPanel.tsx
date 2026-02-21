@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
 import { GlobalSettings } from '../lib/sessionStore';
+import { auth } from '../lib/firebase';
+import { signOut } from 'firebase/auth';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { initiateCheckout, validateLicenseKey } from '../lib/payments';
+import toast from 'react-hot-toast';
+import { getUserSubscription, UserSubscription } from '../lib/subscription';
+import { useEffect } from 'react';
+import './SettingsPanel.css';
 import './SettingsPanel.css';
 
 interface Props {
@@ -21,6 +29,27 @@ const SettingsPanel: React.FC<Props> = ({ settings, onSave, onBack }) => {
     const [llmApiKey, setLlmApiKey] = useState(settings.llmApiKey);
     const [llmModel, setLlmModel] = useState(settings.llmModel);
     const [opacity, setOpacity] = useState(settings.opacity || 0.7);
+
+    // Temp license key state
+    const [licenseKey, setLicenseKey] = useState('');
+    const [user] = useAuthState(auth);
+    const [sub, setSub] = useState<UserSubscription | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            getUserSubscription(user.uid).then(setSub).catch(console.error);
+        }
+    }, [user]);
+
+    const handleSignOut = async () => {
+        try {
+            await signOut(auth);
+            // App.tsx handles the actual redirect to AuthScreen via onUserChange
+        } catch (error) {
+            console.error('Error signing out:', error);
+        }
+    };
 
     const handleProviderChange = (provider: GlobalSettings['llmProvider']) => {
         setLlmProvider(provider);
@@ -109,7 +138,87 @@ const SettingsPanel: React.FC<Props> = ({ settings, onSave, onBack }) => {
                 </div>
             </div>
 
-            <button className="save-btn" onClick={handleSave}>💾 Save Settings</button>
+            <div className="settings-section" style={{ marginTop: '24px', borderTop: '1px solid #333', paddingTop: '16px' }}>
+                <h3 className="section-label">🔒 Subscription & Account</h3>
+                <div style={{ marginBottom: '16px', color: '#ccc', fontSize: '13px' }}>
+                    Logged in as: <strong>{user?.email}</strong>
+                    <div style={{ marginTop: '4px' }}>
+                        Status: <strong>{sub?.isPro ? <span style={{ color: 'gold' }}>PRO</span> : <span style={{ color: 'orange' }}>FREE</span>}</strong>
+                    </div>
+                </div>
+
+                {!sub?.isPro && (
+                    <div style={{ marginBottom: '24px', padding: '16px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', borderRadius: '8px' }}>
+                        <h4 style={{ margin: '0 0 8px 0', color: '#60a5fa' }}>🚀 Upgrade to Pro</h4>
+                        <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#cbd5e1' }}>Get unlimited interview sessions and priority LLM access.</p>
+                        <button
+                            style={{ padding: '10px 16px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: isProcessing ? 'not-allowed' : 'pointer', width: '100%', fontWeight: 'bold' }}
+                            disabled={isProcessing}
+                            onClick={async () => {
+                                setIsProcessing(true);
+                                try {
+                                    await initiateCheckout(
+                                        () => {
+                                            toast.success('Payment successful! Processing upgrade...');
+                                            setTimeout(() => window.location.reload(), 2000); // Reload to fetch new sub status
+                                        },
+                                        (err) => {
+                                            toast.error('Payment failed: ' + err);
+                                        }
+                                    );
+                                } catch (err: any) {
+                                    toast.error(err.message || 'Error occurred');
+                                } finally {
+                                    setIsProcessing(false);
+                                }
+                            }}
+                        >
+                            {isProcessing ? 'Processing...' : 'Purchase Pro (₹2900)'}
+                        </button>
+                    </div>
+                )}
+
+                <label className="field-label">Manually verify License Key</label>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    <input
+                        type="text"
+                        className="field-input"
+                        value={licenseKey}
+                        onChange={e => setLicenseKey(e.target.value)}
+                        placeholder="Paste your License Key here..."
+                        style={{ flex: 1 }}
+                    />
+                    <button
+                        style={{ padding: '8px 12px', background: '#4ade80', color: 'black', border: 'none', borderRadius: '4px', cursor: isProcessing ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
+                        disabled={isProcessing || !licenseKey}
+                        onClick={async () => {
+                            setIsProcessing(true);
+                            try {
+                                const result = await validateLicenseKey(licenseKey);
+                                toast.success(result.message || 'License activated!');
+                                setTimeout(() => window.location.reload(), 1500);
+                            } catch (err: any) {
+                                toast.error(err.message || 'Invalid key');
+                            } finally {
+                                setIsProcessing(false);
+                            }
+                        }}
+                    >
+                        {isProcessing ? '...' : 'Verify'}
+                    </button>
+                </div>
+
+                <button
+                    onClick={handleSignOut}
+                    style={{ background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', width: '100%' }}
+                >
+                    Sign Out
+                </button>
+            </div>
+
+            <div style={{ marginTop: '24px' }}>
+                <button className="save-btn" onClick={handleSave}>💾 Save Settings</button>
+            </div>
         </div>
     );
 };
