@@ -57,7 +57,7 @@ export const initiateCheckout = async (onSuccess: () => void, onError: (err: any
             description: "Pro Tier Upgrade",
             image: "https://your-logo-url.com/logo.png", // optionally add logo
             order_id: orderId,
-            handler: function (response: any) {
+            handler: function (_response: any) {
                 // Payment was successful on the client side
                 // At this point, the webhook is firing or has already fired to update the DB
                 onSuccess();
