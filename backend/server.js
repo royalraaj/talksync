@@ -80,14 +80,32 @@ app.post('/api/create-order', verifyAuth, async (req, res) => {
     let baseAmount = 999; // Base price ₹999
     let finalAmount = baseAmount;
 
-    // Apply Coupon Logic
+    // Apply Dynamic Coupon Logic from Firestore
     if (coupon) {
-        if (coupon.trim().toUpperCase() === 'MRRAJ100') {
-            finalAmount = 0; // 100% Discount
-        } else if (coupon.trim().toUpperCase() === 'TESTTALK1') {
-            finalAmount = Math.round(baseAmount * 0.8); // 20% Discount
-        } else {
-            return res.status(400).json({ success: false, error: 'Invalid discount code' });
+        const couponId = coupon.trim().toUpperCase();
+        try {
+            const couponDoc = await db.collection('coupons').doc(couponId).get();
+
+            if (!couponDoc.exists) {
+                return res.status(400).json({ success: false, error: 'Invalid discount code' });
+            }
+
+            const couponData = couponDoc.data();
+
+            if (!couponData.active) {
+                return res.status(400).json({ success: false, error: 'This discount code is no longer active' });
+            }
+
+            if (couponData.discountType === 'percentage') {
+                const discountAmount = Math.round(baseAmount * (couponData.discountValue / 100));
+                finalAmount = Math.max(0, baseAmount - discountAmount);
+            } else if (couponData.discountType === 'fixed') {
+                finalAmount = Math.max(0, baseAmount - couponData.discountValue);
+            }
+
+        } catch (error) {
+            console.error('Error fetching coupon:', error);
+            return res.status(500).json({ success: false, error: 'Failed to validate discount code' });
         }
     }
 
@@ -98,7 +116,7 @@ app.post('/api/create-order', verifyAuth, async (req, res) => {
             await db.collection('users').doc(uid).set({
                 isPro: true,
                 licenseKey: licenseKey,
-                paymentId: 'COUPON_MRRAJ100',
+                paymentId: 'COUPON_' + (coupon ? coupon.toUpperCase() : 'FREE'),
                 sessionCount: 0,
                 upgradedAt: admin.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
