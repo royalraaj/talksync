@@ -1,6 +1,6 @@
 # TalkSync — Product Requirements Document (PRD)
 
-**Version:** 2.5  
+**Version:** 2.6  
 **Date:** 2026-02-22  
 **Author:** Raj / AI Assistant  
 **Status:** Active
@@ -175,14 +175,17 @@ Launch App → Home Screen (session list)
   └── 📂 Load Session → Live Session (with saved context)
 ```
 
-### 4.8 Freemium Monetization & Authentication
+### 4.0 Freemium Monetization & Authentication
 
-TalkSync features a strict Freemium paywall governed by a standalone backend server and Firebase infrastructure.
+To support a sustainable business model while allowing users to try the product risk-free, TalkSync implements a comprehensive Freemium tiering system utilizing Firebase and Razorpay.
 
-| Feature | Details |
-|---|---|
-| **Authentication** | Users must log in via Email/Password or Google OAuth (Tauri plugin) to use the app. |
-| **Free Tier Limits** | Free users can create a maximum of exactly **5 interview sessions**. |
+| Feature Area | Description |
+| :--- | :--- |
+| **Free Tier** | Unauthenticated and Free users are limited to a maximum of **5 interview sessions**. The Dashboard will track this quota (`sessionCount`). |
+| **Authentication** | Users must sign in via **Email/Password** or **Google OAuth** to track their session counts and Pro status across devices, bridging the gap between Windows PC and Mobile. |
+| **PRO Tier Pricing** | **₹999 for 6 Months**. Upgrading grants unlimited interview sessions and priority feature access. |
+| **Discount Codes** | Users can enter promo codes in Settings during checkout. The Render backend instantly looks up the code in the Firestore `coupons` collection. |
+| **100% Code Bypass** | If a promo code grants 100% off (e.g., `MRRAJ100`), the checkout process entirely bypasses the Razorpay SDK, instantly modifying the database to unlock the PRO tier for free. |
 | **Paywall Lockout** | Upon attempting to create a 6th session, the New Session button disables and alerts the user to upgrade to PRO. |
 | **Razorpay Checkout** | Users can tap "Purchase Pro" in settings to invoke the Razorpay SDK popup inside the Tauri app window. |
 | **Manual Verification** | If a user purchases on a different device, they can paste their `TS-PRO-XYZ` license key into Settings to instantly unlock PRO features. |
