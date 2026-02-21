@@ -71,13 +71,48 @@ app.get('/health', (req, res) => {
 // Endpoint to create a new Razorpay Order (Protected)
 app.post('/api/create-order', verifyAuth, async (req, res) => {
     const uid = req.user.uid;
+    const { coupon } = req.body;
 
     if (!uid) {
         return res.status(400).json({ error: 'UID is required' });
     }
 
+    let baseAmount = 999; // Base price ₹999
+    let finalAmount = baseAmount;
+
+    // Apply Coupon Logic
+    if (coupon) {
+        if (coupon.trim().toUpperCase() === 'MRRAJ100') {
+            finalAmount = 0; // 100% Discount
+        } else if (coupon.trim().toUpperCase() === 'TESTTALK1') {
+            finalAmount = Math.round(baseAmount * 0.8); // 20% Discount
+        } else {
+            return res.status(400).json({ success: false, error: 'Invalid discount code' });
+        }
+    }
+
+    // If perfectly free (100% discount), instantly trigger upgrade and bypass Razorpay
+    if (finalAmount === 0) {
+        try {
+            const licenseKey = 'TS-PRO-' + crypto.randomBytes(8).toString('hex').toUpperCase();
+            await db.collection('users').doc(uid).set({
+                isPro: true,
+                licenseKey: licenseKey,
+                paymentId: 'COUPON_MRRAJ100',
+                sessionCount: 0,
+                upgradedAt: admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            // Return amount 0 so frontend knows to skip Razorpay SDK open
+            return res.json({ success: true, amount: 0, orderId: null });
+        } catch (err) {
+            console.error('Failed to apply 100% discount:', err);
+            return res.status(500).json({ success: false, error: 'Failed to apply discount' });
+        }
+    }
+
     const options = {
-        amount: 2900 * 100, // ₹2900 in paise
+        amount: finalAmount * 100, // in paise
         currency: "INR",
         receipt: "receipt_order_" + uid.substring(0, 10),
         notes: {

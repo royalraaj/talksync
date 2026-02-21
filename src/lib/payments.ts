@@ -22,7 +22,12 @@ export const loadRazorpayScript = () => {
     });
 };
 
-export const initiateCheckout = async (onSuccess: () => void, onError: (err: any) => void, onProgress?: (msg: string) => void) => {
+export const initiateCheckout = async (
+    onSuccess: () => void,
+    onError: (err: any) => void,
+    onProgress?: (msg: string) => void,
+    couponCode?: string
+) => {
     onProgress?.("Loading Razorpay SDK...");
     const isScriptLoaded = await loadRazorpayScript();
 
@@ -35,13 +40,19 @@ export const initiateCheckout = async (onSuccess: () => void, onError: (err: any
         onProgress?.("Authenticating with server...");
         const token = await auth.currentUser?.getIdToken();
         onProgress?.("Waking up server (can take 50s)...");
+
+        const requestBody: any = { uid: auth.currentUser?.uid };
+        if (couponCode) {
+            requestBody.coupon = couponCode;
+        }
+
         const response = await fetch(`${BACKEND_URL}/api/create-order`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ uid: auth.currentUser?.uid })
+            body: JSON.stringify(requestBody)
         });
 
         onProgress?.("Processing order data...");
@@ -52,6 +63,13 @@ export const initiateCheckout = async (onSuccess: () => void, onError: (err: any
         }
 
         const { orderId, amount, currency } = data;
+
+        // If 100% discount, bypass Razorpay entirely!
+        if (amount === 0) {
+            onProgress?.("100% Discount Applied! Upgrading account...");
+            onSuccess();
+            return;
+        }
 
         const options = {
             key: "rzp_test_RzHwJggZye2yVS", // Provided by user

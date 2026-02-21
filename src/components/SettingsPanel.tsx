@@ -33,6 +33,7 @@ const SettingsPanel: React.FC<Props> = ({ settings, onSave, onBack }) => {
 
     // Temp license key state
     const [licenseKey, setLicenseKey] = useState('');
+    const [couponCode, setCouponCode] = useState('');
     const [user] = useAuthState(auth);
     const [sub, setSub] = useState<UserSubscription | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -165,6 +166,24 @@ const SettingsPanel: React.FC<Props> = ({ settings, onSave, onBack }) => {
                     <div style={{ marginBottom: '24px', padding: '16px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', borderRadius: '8px' }}>
                         <h4 style={{ margin: '0 0 8px 0', color: '#60a5fa' }}>🚀 Upgrade to Pro</h4>
                         <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#cbd5e1' }}>Get unlimited interview sessions and priority LLM access.</p>
+
+                        <input
+                            type="text"
+                            placeholder="Discount Code (Optional)"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                            style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                marginBottom: '12px',
+                                borderRadius: '4px',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                background: 'rgba(0,0,0,0.2)',
+                                color: 'white',
+                                boxSizing: 'border-box'
+                            }}
+                        />
+
                         <button
                             style={{ padding: '10px 16px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: isProcessing ? 'not-allowed' : 'pointer', width: '100%', fontWeight: 'bold' }}
                             disabled={isProcessing}
@@ -174,7 +193,7 @@ const SettingsPanel: React.FC<Props> = ({ settings, onSave, onBack }) => {
                                 try {
                                     await initiateCheckout(
                                         () => {
-                                            toast.success('Payment successful! Waiting for server confirmation...', { id: toastId });
+                                            toast.success('Payment successful! Processing upgrade...', { id: toastId });
                                             // The UI will auto-update via the Firestore onSnapshot listener once the webhook finishes
                                         },
                                         (err) => {
@@ -182,7 +201,8 @@ const SettingsPanel: React.FC<Props> = ({ settings, onSave, onBack }) => {
                                         },
                                         (msg) => {
                                             toast.loading(msg, { id: toastId });
-                                        }
+                                        },
+                                        couponCode.trim()
                                     );
 
                                     // Successfully reached the end of the script, Razorpay is open!
@@ -194,7 +214,7 @@ const SettingsPanel: React.FC<Props> = ({ settings, onSave, onBack }) => {
                                 }
                             }}
                         >
-                            {isProcessing ? 'Processing...' : 'Purchase Pro (₹2900)'}
+                            {isProcessing ? 'Processing...' : 'Purchase Pro (₹999 / 6 Months)'}
                         </button>
                     </div>
                 )}
