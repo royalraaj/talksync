@@ -1,8 +1,8 @@
 # TalkSync — Product Requirements Document (PRD)
 
-**Version:** 2.3  
-**Date:** 2026-02-18  
-**Author:** Raj  
+**Version:** 2.4  
+**Date:** 2026-02-22  
+**Author:** Raj / AI Assistant  
 **Status:** Active
 
 ---
@@ -175,9 +175,22 @@ Launch App → Home Screen (session list)
   └── 📂 Load Session → Live Session (with saved context)
 ```
 
+### 4.8 Freemium Monetization & Authentication
+
+TalkSync features a strict Freemium paywall governed by a standalone backend server and Firebase infrastructure.
+
+| Feature | Details |
+|---|---|
+| **Authentication** | Users must log in via Email/Password or Google OAuth (Tauri plugin) to use the app. |
+| **Free Tier Limits** | Free users can create a maximum of exactly **5 interview sessions**. |
+| **Paywall Lockout** | Upon attempting to create a 6th session, the New Session button disables and alerts the user to upgrade to PRO. |
+| **Razorpay Checkout** | Users can tap "Purchase Pro" in settings to invoke the Razorpay SDK popup inside the Tauri app window. |
+| **Manual Verification** | If a user purchases on a different device, they can paste their `TS-PRO-XYZ` license key into Settings to instantly unlock PRO features. |
+| **Real-time Activation** | Firestore `onSnapshot` listeners instantly update the UI from FREE to PRO the millisecond the webhook hits the database, requiring zero app reloads. |
+
 ---
 
-### 4.8 Smart Answer Intelligence
+### 4.9 Smart Answer Intelligence
 
 This is the AI quality engine — it ensures every answer sounds like a real human speaking naturally, with relevant resume-backed content.
 
@@ -391,8 +404,9 @@ An interactive mode where the user speaks their answers, and the AI provides rea
 
 ```mermaid
 graph TD
+    %% Audio / Interview Pipeline
     A["System Audio Loopback<br/>(WASAPI / BlackHole)"] -->|PCM stream| B["Audio Capture Module"]
-    B -->|Audio chunks| C["STT Engine<br/>(Deepgram / Whisper)"]
+    B -->|Audio chunks| C["STT Engine<br/>(Deepgram)"]
     C -->|Transcript text| D["Question Detector"]
     D -->|Detected question| D2["2s Debounce Timer"]
     D2 -->|Confirmed question| E["Context Assembler"]
@@ -402,16 +416,33 @@ graph TD
     H["Company Brief"] --> E
     I["Conversation History"] --> E
     
-    E -->|Prompt| E2["Question Classifier<br/>(50 regex patterns)"]
-    E2 -->|Type-specific prompt| J["LLM Engine<br/>(GPT-4o / Claude / Gemini / Groq)"]
-    J -->|Streamed response| J2["Response Parser<br/>(confidence + hints)"]
+    E -->|Prompt| E2["Question Classifier"]
+    E2 -->|Type-specific prompt| J["LLM Engine<br/>(GPT-4o/Claude/Gemini/Groq)"]
+    J -->|Streamed response| J2["Response Parser"]
     J2 -->|Clean answer| K["Stealth Overlay UI"]
     
+    %% Monetization / Backend Pipeline
+    L["TalkSync Frontend<br/>(Tauri + Firebase SDK)"]
+    M["Render Node.js Backend<br/>(Express + Admin SDK)"]
+    N["Razorpay Gateway"]
+    O["Firestore Database"]
+
+    L == "POST /api/create-order" ==> M
+    M == "Create Order" ==> N
+    N -. "Return Order ID" .-> M
+    M -. "Include Order ID in Options" .-> L
+    L == "Open UI" ==> N
+    N -. "Payment Captured Webhook" .-> M
+    M == "Generate TS-PRO Key / Verify Sig" ==> M
+    M == "Update isPro: true" ==> O
+    O -. "onSnapshot real-time update" .-> L
+
+    %% Styling
     style K fill:#1a1a2e,stroke:#e94560,color:#fff
     style A fill:#0f3460,stroke:#16213e,color:#fff
     style J fill:#533483,stroke:#2b2d42,color:#fff
-    style E2 fill:#1b5e20,stroke:#2e7d32,color:#fff
-    style J2 fill:#e65100,stroke:#bf360c,color:#fff
+    style M fill:#2E7D32,stroke:#1B5E20,color:#fff
+    style N fill:#0277BD,stroke:#01579B,color:#fff
 ```
 
 ### 5.1 Tech Stack
@@ -420,6 +451,9 @@ graph TD
 |---|---|
 | **Desktop shell** | **Tauri 2.0** (lightweight, Rust-based) — ~10 MB binary, low RAM footprint |
 | **Frontend (overlay)** | React 19 + TypeScript + CSS |
+| **Monetization Backend** | **Node.js + Express** hosted on Render (Free Tier) |
+| **Authentication/DB** | **Firebase** Auth & Firestore (Web SDK on frontend, Admin SDK on backend) |
+| **Payment Gateway** | **Razorpay** SDK + Node.js Webhooks |
 | **Audio capture** | Rust WASAPI loopback (Windows) |
 | **STT** | Deepgram WebSocket API (cloud) |
 | **LLM** | OpenAI / Anthropic / Google Gemini / Groq API via REST streaming |
@@ -543,6 +577,17 @@ flowchart TD
 | Global Error Boundary | P0 | ✅ Done |
 | Deepgram Auto-Reconnect (Exponential Backoff) | P1 | ✅ Done |
 | Production Console Cleanup | P1 | ✅ Done |
+
+### 9.1 Monetization Infrastructure Status
+| Feature | Priority | Status |
+|---|---|---|
+| User Authentication (Email/Google) | P0 | ✅ Done |
+| Free tier limitation logic (5 sessions) | P0 | ✅ Done |
+| Standalone Render backend API | P0 | ✅ Done |
+| Razorpay Checkout UI Integration | P0 | ✅ Done |
+| Razorpay Webhook Verification | P0 | ✅ Done |
+| Real-time Firestore Sync | P0 | ✅ Done |
+| Manual License Key Validation | P1 | ✅ Done |
 
 > [!NOTE]
 > **Scope:** Personal use tool. All interview types supported (behavioral, technical, personal, situational, general).
