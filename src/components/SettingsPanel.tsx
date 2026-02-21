@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GlobalSettings } from '../lib/sessionStore';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { initiateCheckout, validateLicenseKey } from '../lib/payments';
@@ -37,9 +38,19 @@ const SettingsPanel: React.FC<Props> = ({ settings, onSave, onBack }) => {
     const [isProcessing, setIsProcessing] = useState(false);
 
     useEffect(() => {
+        let unsubscribe: () => void;
         if (user) {
-            getUserSubscription(user.uid).then(setSub).catch(console.error);
+            getUserSubscription(user.uid).then(() => {
+                unsubscribe = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
+                    if (docSnap.exists()) {
+                        setSub(docSnap.data() as UserSubscription);
+                    }
+                });
+            }).catch(console.error);
         }
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
     }, [user]);
 
     const handleSignOut = async () => {
@@ -156,18 +167,25 @@ const SettingsPanel: React.FC<Props> = ({ settings, onSave, onBack }) => {
                             disabled={isProcessing}
                             onClick={async () => {
                                 setIsProcessing(true);
+                                const toastId = toast.loading('Preparing Checkout...');
                                 try {
                                     await initiateCheckout(
                                         () => {
-                                            toast.success('Payment successful! Processing upgrade...');
-                                            setTimeout(() => window.location.reload(), 2000); // Reload to fetch new sub status
+                                            toast.success('Payment successful! Waiting for server confirmation...', { id: toastId });
+                                            // The UI will auto-update via the Firestore onSnapshot listener once the webhook finishes
                                         },
                                         (err) => {
-                                            toast.error('Payment failed: ' + err);
+                                            toast.error('Payment failed: ' + err, { id: toastId });
+                                        },
+                                        (msg) => {
+                                            toast.loading(msg, { id: toastId });
                                         }
                                     );
+
+                                    // Successfully reached the end of the script, Razorpay is open!
+                                    toast.dismiss(toastId);
                                 } catch (err: any) {
-                                    toast.error(err.message || 'Error occurred');
+                                    toast.error(err.message || 'Error occurred', { id: toastId });
                                 } finally {
                                     setIsProcessing(false);
                                 }

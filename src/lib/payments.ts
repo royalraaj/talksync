@@ -1,7 +1,7 @@
 import { auth } from './firebase';
 
-// Use localhost for testing, replace with Render URL when deployed
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+// Use Render URL as default fallback
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://talksync-backend-api.onrender.com';
 
 export const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -22,7 +22,8 @@ export const loadRazorpayScript = () => {
     });
 };
 
-export const initiateCheckout = async (onSuccess: () => void, onError: (err: any) => void) => {
+export const initiateCheckout = async (onSuccess: () => void, onError: (err: any) => void, onProgress?: (msg: string) => void) => {
+    onProgress?.("Loading Razorpay SDK...");
     const isScriptLoaded = await loadRazorpayScript();
 
     if (!isScriptLoaded) {
@@ -31,7 +32,9 @@ export const initiateCheckout = async (onSuccess: () => void, onError: (err: any
 
     // Call our Express Backend to create an Order
     try {
+        onProgress?.("Authenticating with server...");
         const token = await auth.currentUser?.getIdToken();
+        onProgress?.("Waking up server (can take 50s)...");
         const response = await fetch(`${BACKEND_URL}/api/create-order`, {
             method: 'POST',
             headers: {
@@ -41,6 +44,7 @@ export const initiateCheckout = async (onSuccess: () => void, onError: (err: any
             body: JSON.stringify({ uid: auth.currentUser?.uid })
         });
 
+        onProgress?.("Processing order data...");
         const data = await response.json();
 
         if (!data.success) {
@@ -50,7 +54,7 @@ export const initiateCheckout = async (onSuccess: () => void, onError: (err: any
         const { orderId, amount, currency } = data;
 
         const options = {
-            key: "YOUR_RAZORPAY_KEY_ID", // Will be replaced manually by user
+            key: "rzp_test_RzHwJggZye2yVS", // Provided by user
             amount: amount.toString(),
             currency: currency,
             name: "TalkSync",
@@ -76,6 +80,7 @@ export const initiateCheckout = async (onSuccess: () => void, onError: (err: any
             onError(response.error.description);
         });
 
+        onProgress?.("Opening Checkout...");
         razorpayOb.open();
 
     } catch (err: any) {
