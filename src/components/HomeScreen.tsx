@@ -58,7 +58,7 @@ const HomeScreen: React.FC<Props> = ({
         <div className="home-screen">
             <div className="home-header">
                 <div>
-                    <h1 className="home-title">🎯 TalkSync {sub?.isPro && <span style={{ fontSize: '14px', background: 'gold', color: 'black', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px' }}>PRO</span>}</h1>
+                    <h1 className="home-title">🎯 TalkSync {sub?.isPro && <span style={{ fontSize: '14px', background: 'gold', color: 'black', WebkitTextFillColor: 'black', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px' }}>PRO</span>}</h1>
                     <p className="home-subtitle">Your AI interview assistant</p>
                 </div>
                 <button className="settings-btn" onClick={onOpenSettings} title="Settings">
