@@ -10,13 +10,28 @@ const app = express();
 // Initialize Firebase Admin (You will need to provide the Service Account Key on Render)
 // For local testing, you can download the serviceAccountKey.json from Firebase Settings -> Service Accounts
 try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+    const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    if (!rawKey) {
+        throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY environment variable is missing.");
+    }
+
+    // Sometimes environment variables can get weirdly escaped
+    let parsedKey;
+    try {
+        parsedKey = JSON.parse(rawKey);
+    } catch (parseError) {
+        console.warn("Initial JSON parse failed, attempting to unescape newlines...");
+        // If it was pasted as a single string and Render escaped the quotes/newlines
+        const unescapedKey = rawKey.replace(/\\n/g, '\n');
+        parsedKey = JSON.parse(unescapedKey);
+    }
+
     admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
+        credential: admin.credential.cert(parsedKey)
     });
     console.log("Firebase Admin initialized successfully.");
 } catch (e) {
-    console.error("Failed to initialize Firebase Admin. Did you set FIREBASE_SERVICE_ACCOUNT_KEY?", e);
+    console.error("Failed to initialize Firebase Admin:", e.message);
 }
 
 const db = admin.firestore();
