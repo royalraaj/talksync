@@ -7,6 +7,13 @@ const admin = require('firebase-admin');
 
 const app = express();
 
+// Helper to calculate expiry date (6 months from now)
+const getSixMonthsFromNow = () => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + 6);
+    return date;
+};
+
 // Initialize Firebase Admin (You will need to provide the Service Account Key on Render)
 // For local testing, you can download the serviceAccountKey.json from Firebase Settings -> Service Accounts
 try {
@@ -118,7 +125,8 @@ app.post('/api/create-order', verifyAuth, async (req, res) => {
                 licenseKey: licenseKey,
                 paymentId: 'COUPON_' + (coupon ? coupon.toUpperCase() : 'FREE'),
                 sessionCount: 0,
-                upgradedAt: admin.firestore.FieldValue.serverTimestamp()
+                upgradedAt: admin.firestore.FieldValue.serverTimestamp(),
+                proExpiresAt: admin.firestore.Timestamp.fromDate(getSixMonthsFromNow())
             }, { merge: true });
 
             // Return amount 0 so frontend knows to skip Razorpay SDK open
@@ -183,7 +191,8 @@ app.post('/api/webhook', async (req, res) => {
                 licenseKey: licenseKey,
                 paymentId: paymentData.id,
                 sessionCount: 0,
-                upgradedAt: admin.firestore.FieldValue.serverTimestamp()
+                upgradedAt: admin.firestore.FieldValue.serverTimestamp(),
+                proExpiresAt: admin.firestore.Timestamp.fromDate(getSixMonthsFromNow())
             }, { merge: true });
 
             console.log(`Successfully upgraded user ${uid} and generated license ${licenseKey}`);
@@ -220,7 +229,10 @@ app.post('/api/validate-license', verifyAuth, async (req, res) => {
             return res.status(403).json({ success: false, message: 'This license key is already claimed by another user.' });
         }
 
-        await usersRef.doc(uid).set({ isPro: true }, { merge: true });
+        await usersRef.doc(uid).set({
+            isPro: true,
+            proExpiresAt: admin.firestore.Timestamp.fromDate(getSixMonthsFromNow())
+        }, { merge: true });
 
         return res.json({ success: true, message: 'License key is valid!' });
 

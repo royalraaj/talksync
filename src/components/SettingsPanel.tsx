@@ -46,7 +46,14 @@ const SettingsPanel: React.FC<Props> = ({ settings, onSave, onBack }) => {
                 if (!isMounted) return;
                 unsubscribe = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
                     if (docSnap.exists()) {
-                        setSub(docSnap.data() as UserSubscription);
+                        const data = docSnap.data() as UserSubscription;
+                        if (data.isPro && data.proExpiresAt) {
+                            const expiryDate = data.proExpiresAt.toDate ? data.proExpiresAt.toDate() : new Date(data.proExpiresAt.seconds * 1000);
+                            if (expiryDate < new Date()) {
+                                data.isPro = false;
+                            }
+                        }
+                        setSub(data);
                     }
                 });
             }).catch(console.error);
