@@ -38,9 +38,11 @@ const SettingsPanel: React.FC<Props> = ({ settings, onSave, onBack }) => {
     const [isProcessing, setIsProcessing] = useState(false);
 
     useEffect(() => {
-        let unsubscribe: () => void;
+        let unsubscribe: (() => void) | undefined;
+        let isMounted = true;
         if (user) {
             getUserSubscription(user.uid).then(() => {
+                if (!isMounted) return;
                 unsubscribe = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
                     if (docSnap.exists()) {
                         setSub(docSnap.data() as UserSubscription);
@@ -49,6 +51,7 @@ const SettingsPanel: React.FC<Props> = ({ settings, onSave, onBack }) => {
             }).catch(console.error);
         }
         return () => {
+            isMounted = false;
             if (unsubscribe) unsubscribe();
         };
     }, [user]);
