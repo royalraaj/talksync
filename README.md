@@ -107,6 +107,7 @@ All your data is stored locally on your machine — nothing is sent to the cloud
 - **Windows:** `%APPDATA%/com.raj.talksync/`
   - `settings.json` — Your API keys, selected provider, opacity
   - `sessions/` — Individual session files (resume, JD, transcript, AI answers)
+- **Backend Analytics:** [Live Uptime Status (UptimeRobot)](https://stats.uptimerobot.com/aYufbf832g)
 
 ### Backup & Restore
 - To **back up**, copy the `com.raj.talksync` folder

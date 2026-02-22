@@ -190,7 +190,7 @@ To support a sustainable business model while allowing users to try the product 
 | **Razorpay Checkout** | Users can tap "Purchase Pro" in settings to invoke the Razorpay SDK popup inside the Tauri app window. |
 | **Manual Verification** | If a user purchases on a different device, they can paste their `TS-PRO-XYZ` license key into Settings to instantly unlock PRO features. |
 | **Real-time Activation** | Firestore `onSnapshot` listeners instantly update the UI from FREE to PRO the millisecond the webhook hits the database, requiring zero app reloads. |
-| **Backend Keep-Alive** | The Render Free Tier backend is kept continuously awake via a completely free UptimeRobot 10-minute HTTP ping to the `/health` endpoint. This guarantees instant 0-second Razorpay checkout loads for users. |
+| **Backend Keep-Alive** | The Render Free Tier backend is kept continuously awake via a completely free UptimeRobot 10-minute HTTP ping to the `/health` endpoint. This guarantees instant 0-second Razorpay checkout loads for users. Live Status: [UptimeMonitor](https://stats.uptimerobot.com/aYufbf832g) |
 
 ---
 
