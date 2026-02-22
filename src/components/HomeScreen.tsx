@@ -25,7 +25,7 @@ const HomeScreen: React.FC<Props> = ({
 
     useEffect(() => {
         if (user) {
-            getUserSubscription(user.uid).then(setSub).catch(console.error);
+            getUserSubscription(user.uid, user.email).then(setSub).catch(console.error);
         }
     }, [user, sessions.length]); // Re-fetch on session changes just in case
 

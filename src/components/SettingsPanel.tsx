@@ -42,7 +42,7 @@ const SettingsPanel: React.FC<Props> = ({ settings, onSave, onBack }) => {
         let unsubscribe: (() => void) | undefined;
         let isMounted = true;
         if (user) {
-            getUserSubscription(user.uid).then(() => {
+            getUserSubscription(user.uid, user.email).then(() => {
                 if (!isMounted) return;
                 unsubscribe = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
                     if (docSnap.exists()) {

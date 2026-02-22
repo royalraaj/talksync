@@ -6,31 +6,46 @@ export interface UserSubscription {
     sessionCount: number;
     licenseKey?: string;
     proExpiresAt?: any; // Firestore Timestamp
+    email?: string | null;
 }
 
 export const FREE_TIER_LIMIT = 5; // Updated to 5
 
-export async function getUserSubscription(uid: string): Promise<UserSubscription> {
+export async function getUserSubscription(uid: string, email?: string | null): Promise<UserSubscription> {
     const userDocRef = doc(db, 'users', uid);
     const userSnap = await getDoc(userDocRef);
 
     if (userSnap.exists()) {
         const data = userSnap.data() as UserSubscription;
+        let requiresMerge = false;
+        let mergeData: any = {};
+
+        // Sync email if missing or changed
+        if (email && data.email !== email) {
+            mergeData.email = email;
+            requiresMerge = true;
+            data.email = email;
+        }
 
         // Lazy-evaluate subscription expiry
         if (data.isPro && data.proExpiresAt) {
             const expiryDate = data.proExpiresAt.toDate ? data.proExpiresAt.toDate() : new Date(data.proExpiresAt.seconds * 1000);
             if (expiryDate < new Date()) {
                 // Subscription has expired
-                await setDoc(userDocRef, { isPro: false }, { merge: true });
+                mergeData.isPro = false;
+                requiresMerge = true;
                 data.isPro = false;
             }
+        }
+
+        if (requiresMerge) {
+            await setDoc(userDocRef, mergeData, { merge: true });
         }
 
         return data;
     } else {
         // Create initial default document
-        const defaultSub: UserSubscription = { isPro: false, sessionCount: 0 };
+        const defaultSub: UserSubscription = { isPro: false, sessionCount: 0, email: email || null };
         await setDoc(userDocRef, defaultSub);
         return defaultSub;
     }

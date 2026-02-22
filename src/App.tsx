@@ -175,7 +175,7 @@ function App() {
       // It's a brand new session, increment the user's free tier usage count
       if (user) {
         try {
-          const sub = await getUserSubscription(user.uid);
+          const sub = await getUserSubscription(user.uid, user.email);
           if (!sub.isPro) {
             await incrementSessionCount(user.uid, sub.sessionCount);
           }
