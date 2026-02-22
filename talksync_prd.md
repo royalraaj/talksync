@@ -185,7 +185,7 @@ To support a sustainable business model while allowing users to try the product 
 | **Authentication** | Users must sign in via **Email/Password** or **Google OAuth** to track their session counts and Pro status across devices, bridging the gap between Windows PC and Mobile. |
 | **PRO Tier Pricing** | **₹999 for 6 Months**. Upgrading grants unlimited interview sessions and priority feature access. |
 | **Discount Codes** | Users can enter promo codes in Settings during checkout. The Render backend instantly looks up the code in the Firestore `coupons` collection. |
-| **100% Code Bypass** | If a promo code grants 100% off (e.g., `MRRAJ100`), the checkout process entirely bypasses the Razorpay SDK, instantly modifying the database to unlock the PRO tier for free. |
+| **100% Code Bypass** | If a promo code grants 100% off (e.g., `MRRAJ50`), the checkout process entirely bypasses the Razorpay SDK, instantly modifying the database to unlock the PRO tier for free. |
 | **Paywall Lockout** | Upon attempting to create a 6th session, the New Session button disables and alerts the user to upgrade to PRO. |
 | **Razorpay Checkout** | Users can tap "Purchase Pro" in settings to invoke the Razorpay SDK popup inside the Tauri app window. |
 | **Manual Verification** | If a user purchases on a different device, they can paste their `TS-PRO-XYZ` license key into Settings to instantly unlock PRO features. |
