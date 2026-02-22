@@ -29,8 +29,16 @@ export async function getUserSubscription(uid: string, email?: string | null): P
 
         // Lazy-evaluate subscription expiry
         if (data.isPro && data.proExpiresAt) {
-            const expiryDate = data.proExpiresAt.toDate ? data.proExpiresAt.toDate() : new Date(data.proExpiresAt.seconds * 1000);
-            if (expiryDate < new Date()) {
+            let expiryDate: Date | null = null;
+            try {
+                expiryDate = data.proExpiresAt.toDate
+                    ? data.proExpiresAt.toDate()
+                    : new Date(data.proExpiresAt.seconds * 1000);
+            } catch {
+                // Malformed timestamp - treat as expired
+                expiryDate = new Date(0);
+            }
+            if (!expiryDate || isNaN(expiryDate.getTime()) || expiryDate < new Date()) {
                 // Subscription has expired
                 mergeData.isPro = false;
                 requiresMerge = true;
