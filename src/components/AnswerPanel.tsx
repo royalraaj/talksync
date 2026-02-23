@@ -29,6 +29,35 @@ const QTYPE_CONFIG: Record<QuestionType, { label: string; emoji: string }> = {
     general: { label: 'General', emoji: '💬' },
 };
 
+/** Parse **bold** markers into React elements with highlighted styling */
+function renderFormattedText(text: string): React.ReactNode[] {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+            const inner = part.slice(2, -2);
+            return (
+                <span key={i} className="key-phrase">{inner}</span>
+            );
+        }
+        return <span key={i}>{part}</span>;
+    });
+}
+
+/** Calculate speaking time estimate from word count (avg 2.5 words/sec) */
+function getSpeakingTime(text: string): { words: number; seconds: number; label: string } {
+    const words = text.split(/\s+/).filter(w => w.length > 0).length;
+    const seconds = Math.round(words / 2.5);
+    let label: string;
+    if (seconds < 60) {
+        label = `~${seconds}s`;
+    } else {
+        const min = Math.floor(seconds / 60);
+        const sec = seconds % 60;
+        label = sec > 0 ? `~${min}m ${sec}s` : `~${min}m`;
+    }
+    return { words, seconds, label };
+}
+
 const AnswerPanel: React.FC<Props> = ({
     answer, isGenerating, question, error,
     confidence, hints, questionType, isFollowUp,
@@ -49,6 +78,7 @@ const AnswerPanel: React.FC<Props> = ({
 
     const qType = QTYPE_CONFIG[questionType];
     const conf = confidence ? CONFIDENCE_CONFIG[confidence] : null;
+    const speakingTime = answer ? getSpeakingTime(answer) : null;
 
     return (
         <div className="answer-panel">
@@ -58,6 +88,11 @@ const AnswerPanel: React.FC<Props> = ({
                     <span>Suggested Answer</span>
                 </div>
                 <div className="answer-actions">
+                    {speakingTime && !isGenerating && (
+                        <span className="speaking-time-badge" title={`${speakingTime.words} words`}>
+                            ⏱ {speakingTime.label}
+                        </span>
+                    )}
                     {conf && (
                         <span className="confidence-badge" style={{ borderColor: conf.color }}>
                             {conf.emoji} {conf.label}
@@ -84,29 +119,14 @@ const AnswerPanel: React.FC<Props> = ({
                 <div className="answer-error">⚠️ {error}</div>
             )}
 
-            <div className="answer-content" ref={answerRef}>
-                {!answer && !isGenerating && !error && (
-                    <div className="answer-empty">
-                        Listening for questions...
-                    </div>
-                )}
-                {answer && <div className="answer-text">{answer}</div>}
-                {isGenerating && (
-                    <span className="generating-indicator">
-                        <span className="dot"></span>
-                        <span className="dot"></span>
-                        <span className="dot"></span>
-                    </span>
-                )}
-            </div>
-
+            {/* Hints ABOVE the answer — quick-reference cheat sheet */}
             {hints.length > 0 && (
                 <div className="hints-section">
                     <button
                         className="hints-toggle"
                         onClick={() => setHintsExpanded(!hintsExpanded)}
                     >
-                        📌 Coaching Hints {hintsExpanded ? '▾' : '▸'}
+                        🎯 Quick Phrases {hintsExpanded ? '▾' : '▸'}
                     </button>
                     {hintsExpanded && (
                         <ul className="hints-list">
@@ -118,14 +138,37 @@ const AnswerPanel: React.FC<Props> = ({
                 </div>
             )}
 
+            <div className="answer-content" ref={answerRef}>
+                {!answer && !isGenerating && !error && (
+                    <div className="answer-empty">
+                        Listening for questions...
+                    </div>
+                )}
+                {answer && (
+                    <div className="answer-text">
+                        {renderFormattedText(answer)}
+                    </div>
+                )}
+                {isGenerating && (
+                    <span className="generating-indicator">
+                        <span className="dot"></span>
+                        <span className="dot"></span>
+                        <span className="dot"></span>
+                    </span>
+                )}
+            </div>
+
             {/* Quick Actions */}
             {answer && !isGenerating && (
                 <div className="quick-actions">
                     <button onClick={() => onAction('shorter')} title="Make it concise (<45s)">
-                        ⏱️ Make Shorter
+                        ⏱️ Shorter
+                    </button>
+                    <button onClick={() => onAction('simplify')} title="Simpler vocabulary">
+                        💬 Simplify
                     </button>
                     <button onClick={() => onAction('example')} title="Add a STAR example">
-                        ➕ Add Example
+                        ➕ Example
                     </button>
                     <button onClick={() => onAction('technical')} title="Add technical details">
                         ⚙️ Deep Dive

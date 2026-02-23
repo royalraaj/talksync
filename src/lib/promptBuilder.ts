@@ -145,13 +145,27 @@ const QUESTION_PATTERNS = [
     /\bshare (a|an|your)\b/i,
 ];
 
+// Implicit questions: commands, WH-words without '?', imperative phrases
+const IMPLICIT_QUESTION_PATTERNS = [
+    /^(discuss|describe|elaborate|explain|outline|summarize|detail)\b/i,
+    /^please\s+(tell|describe|explain|discuss|share|walk)/i,
+    /^(what|how|why|when|where|which|who|whom|whose)\b/i,
+    /^(do|does|did|is|are|was|were|can|could|would|should|have|has|had)\s+you\b/i,
+    /\b(your experience with|your approach to|your opinion on|your thoughts on)\b/i,
+    /\b(talk about|speak to|address)\b/i,
+    /^(so|okay|alright|now)\s*,?\s*(what|how|why|tell|describe|can|could|would)/i,
+    /\b(what kind of|what type of|what sort of)\b/i,
+    /\b(comfortable with|familiar with|experience in|knowledge of)\b/i,
+];
+
 /**
  * Detect if a transcript segment contains a question
+ * Supports single utterances and multi-sentence accumulated text
  * Returns the detected question text, or null
  */
 export function detectQuestion(text: string): string | null {
     const trimmed = text.trim();
-    if (!trimmed || trimmed.length < 10) return null;
+    if (!trimmed || trimmed.length < 5) return null;
 
     // Direct question mark
     if (trimmed.includes('?')) {
@@ -159,14 +173,37 @@ export function detectQuestion(text: string): string | null {
         const sentences = trimmed.split(/(?<=[.!?])\s+/);
         const questions = sentences.filter((s) => s.includes('?'));
         if (questions.length > 0) {
-            return questions.join(' ');
+            // Return the full accumulated text for context, not just the question sentence
+            return trimmed;
         }
     }
 
-    // Pattern-based detection
+    // Pattern-based detection (explicit question patterns)
     for (const pattern of QUESTION_PATTERNS) {
         if (pattern.test(trimmed)) {
             return trimmed;
+        }
+    }
+
+    // Implicit question detection (commands, WH-words, imperatives)
+    for (const pattern of IMPLICIT_QUESTION_PATTERNS) {
+        if (pattern.test(trimmed)) {
+            return trimmed;
+        }
+    }
+
+    // Multi-sentence detection: split into sentences and check each
+    const sentences = trimmed.split(/(?<=[.!?])\s+/);
+    if (sentences.length > 1) {
+        for (const sentence of sentences) {
+            const s = sentence.trim();
+            if (s.length < 5) continue;
+            // Check if any individual sentence is a question
+            for (const pattern of [...QUESTION_PATTERNS, ...IMPLICIT_QUESTION_PATTERNS]) {
+                if (pattern.test(s)) {
+                    return trimmed; // Return full text for context
+                }
+            }
         }
     }
 
@@ -192,12 +229,73 @@ export function buildConversationHistory(
 }
 
 /**
- * Estimate if a speaker is the interviewer (speaker 0) or the candidate
- * Heuristic: the speaker who talks first is likely the interviewer
- * and the speaker who talks less overall is likely the candidate
+ * Estimate which speaker is the interviewer using multiple signals:
+ * 1. Question ratio — the speaker who asks more questions is likely the interviewer
+ * 2. Talk ratio — the interviewer typically speaks less overall
+ * 3. First speaker — fallback heuristic
+ * Re-evaluates on every call for improving accuracy over time.
  */
 export function identifyInterviewer(entries: ConversationEntry[]): number {
     if (entries.length === 0) return 0;
-    // The first speaker is typically the interviewer
-    return entries[0].speaker;
+    if (entries.length < 3) {
+        // Not enough data yet — fall back to first speaker
+        return entries[0].speaker;
+    }
+
+    // Collect unique speakers
+    const speakers = new Set(entries.map(e => e.speaker));
+    if (speakers.size < 2) return entries[0].speaker;
+
+    // Score each speaker
+    const scores: Record<number, number> = {};
+    const wordCounts: Record<number, number> = {};
+    const questionCounts: Record<number, number> = {};
+
+    for (const speaker of speakers) {
+        scores[speaker] = 0;
+        wordCounts[speaker] = 0;
+        questionCounts[speaker] = 0;
+    }
+
+    for (const entry of entries) {
+        const words = entry.text.split(/\s+/).length;
+        wordCounts[entry.speaker] += words;
+
+        // Count questions asked by this speaker
+        if (detectQuestion(entry.text)) {
+            questionCounts[entry.speaker]++;
+        }
+    }
+
+    for (const speaker of speakers) {
+        // Higher question ratio = more likely interviewer
+        const totalQuestions = Object.values(questionCounts).reduce((a, b) => a + b, 0);
+        if (totalQuestions > 0) {
+            scores[speaker] += (questionCounts[speaker] / totalQuestions) * 50;
+        }
+
+        // Lower talk ratio = more likely interviewer (they listen more)
+        const totalWords = Object.values(wordCounts).reduce((a, b) => a + b, 0);
+        if (totalWords > 0) {
+            const talkRatio = wordCounts[speaker] / totalWords;
+            scores[speaker] += (1 - talkRatio) * 30;
+        }
+
+        // First speaker bonus
+        if (entries[0].speaker === speaker) {
+            scores[speaker] += 20;
+        }
+    }
+
+    // Return speaker with highest score
+    let bestSpeaker = entries[0].speaker;
+    let bestScore = -1;
+    for (const speaker of speakers) {
+        if (scores[speaker] > bestScore) {
+            bestScore = scores[speaker];
+            bestSpeaker = speaker;
+        }
+    }
+
+    return bestSpeaker;
 }

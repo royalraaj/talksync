@@ -85,26 +85,37 @@ function App() {
   const lastQuestionRef = useRef<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auto-generate answer when question detected — debounced to wait for interviewer to finish
+  // Auto-generate answer when question detected — smart debounce
   useEffect(() => {
     if (detectedQuestion && detectedQuestion !== lastQuestionRef.current && activeSession) {
-      // Clear any pending debounce — interviewer is still talking
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      // Check if this is just a refinement of the same question (more words added)
+      const isSameQuestion = lastQuestionRef.current &&
+        (detectedQuestion.includes(lastQuestionRef.current) ||
+          lastQuestionRef.current.includes(detectedQuestion));
 
-      // Wait 2 seconds of silence before triggering answer generation
-      debounceRef.current = setTimeout(() => {
-        lastQuestionRef.current = detectedQuestion;
-        clearAnswer();
-        generateAnswer(
-          detectedQuestion,
-          activeSession.resumeText,
-          activeSession.jobDescription,
-          activeSession.companyBrief,
-          getConversationHistory(),
-          undefined,
-          activeSession.additionalNotes
-        );
-      }, 2000);
+      // Only reset timer if it's a substantially different question
+      if (!isSameQuestion && debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+
+      // Start or keep the debounce timer
+      if (!debounceRef.current) {
+        debounceRef.current = setTimeout(() => {
+          lastQuestionRef.current = detectedQuestion;
+          debounceRef.current = null;
+          clearAnswer();
+          generateAnswer(
+            detectedQuestion,
+            activeSession.resumeText,
+            activeSession.jobDescription,
+            activeSession.companyBrief,
+            getConversationHistory(),
+            undefined,
+            activeSession.additionalNotes
+          );
+        }, 1500); // Reduced from 2000ms — sentence buffer handles the waiting
+      }
     }
 
     return () => {
@@ -278,6 +289,9 @@ function App() {
         break;
       case 'retry':
         instruction = "Regenerate the answer with a slightly different tone.";
+        break;
+      case 'simplify':
+        instruction = "Rewrite using simpler, everyday vocabulary. Use short sentences (max 12 words each). Avoid jargon. Make it easy to say out loud without stumbling.";
         break;
     }
 

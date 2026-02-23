@@ -1,7 +1,7 @@
 # TalkSync — Product Requirements Document (PRD)
 
-**Version:** 2.6  
-**Date:** 2026-02-22  
+**Version:** 2.7  
+**Date:** 2026-02-24  
 **Author:** Raj / AI Assistant  
 **Status:** Active
 
@@ -62,12 +62,16 @@ Audio chunks are streamed to Deepgram's WebSocket API for real-time transcriptio
 |---|---|
 | **Engine** | Deepgram Streaming API — WebSocket-based, real-time |
 | **Accuracy** | ≥ 95% word accuracy on English conversational speech |
-| **Speaker diarization** | Distinguishes interviewer (Speaker 0) from candidate (Speaker 1) — only interviewer speech triggers answer generation |
+| **Speaker diarization** | Multi-signal interviewer identification (question ratio 50% + talk ratio 30% + first-speaker 20%) — re-evaluated every 5 entries |
 | **Streaming model** | `nova-2` — Deepgram's latest, optimized for conversation |
 | **Punctuation** | Automatic punctuation and capitalization |
 | **Interim results** | Shows partial transcripts as the person speaks, finalized when sentence completes |
+| **Utterance end** | 1800ms silence timeout — prevents premature cutoff when interviewer pauses to think |
+| **Endpointing** | 400ms — prevents mid-phrase finalization on brief pauses |
+| **Filler words** | Enabled — captures "um", "so" as signals the interviewer is still talking |
+| **Sentence buffer** | Accumulates consecutive utterances per speaker (up to 5 or 2.5s silence) for multi-sentence question detection |
 
-**How diarization works:** The first speaker detected is labeled as Speaker 0 (interviewer). In the transcript panel, interviewer lines appear on the left and candidate lines on the right — making it easy to follow the conversation flow.
+**How diarization works:** Speaker identification uses a multi-signal scoring system: the speaker who asks more questions (50% weight), speaks less overall (30% weight), and spoke first (20% weight) is identified as the interviewer. This is re-evaluated periodically for improving accuracy. As a safety net, question detection runs on **all speakers** — not just the identified interviewer — to prevent missed questions due to misidentification.
 
 ---
 
@@ -79,11 +83,12 @@ When a question is detected, the app sends the full context (resume + JD + compa
 |---|---|
 | **LLM backend** | OpenAI GPT-4o, Anthropic Claude, Google Gemini, Groq — user picks in Settings |
 | **Context window** | Resume + JD + Company brief + conversation history + detected question |
-| **Answer style** | Conversational first-person — adapts format based on question type (§4.8) |
+| **Answer style** | Conversational first-person — structured as Opening → Body → Close with **bold key phrases** for quick scanning |
 | **Response time** | 3–5 seconds (GPT-4o/Claude), ~1–2 seconds (Groq — ultra-fast inference) |
 | **Streaming** | Token-by-token display — candidate can start reading while the rest generates |
-| **Structured output** | Each response contains: `[CONFIDENCE:level]` tag + main answer + `[HINTS]` section |
-| **Max tokens** | 800 tokens (~300 words) — enough for a detailed answer + hints |
+| **Structured output** | Each response contains: `[CONFIDENCE:level]` tag + scannable answer with **bold** key phrases + `[HINTS]` section with ready-to-speak "Say:" phrases |
+| **Word limits** | Strict per-type: Regular 120-160 words (~45-60s), Personal 180-220 words (~75-90s), Follow-ups 60-90 words (~25-35s), General 40-70 words (~15-25s) |
+| **Max tokens** | 800 tokens — enough for a detailed answer + hints |
 | **Temperature** | 0.7 — balanced between creativity and consistency |
 
 **Provider comparison:**
@@ -134,16 +139,17 @@ The app is designed to be **completely invisible** during screen sharing on Zoom
 
 ### 4.6 Answer Display UI (Overlay)
 
-The app's UI is a compact floating panel designed for quick glancing during a conversation.
+The app's UI is a compact floating panel designed for **quick glancing during a conversation** — every element is optimized for readability at a glance.
 
 | Element | Details |
 |---|---|
 | **Layout** | Compact floating panel (≈ 400×500 px), frosted glass dark background |
 | **Top section** | Live transcript — color-coded by speaker (interviewer = left, candidate = right) |
-| **Main section** | Suggested answer — streams in real-time with animated generating indicator (● ● ●) |
+| **Speaking time badge** | `⏱ ~45s` — shows estimated speaking time calculated from word count (2.5 words/sec), displayed in the answer header |
+| **Quick Phrases (hints)** | 🎯 Positioned **above the answer** as a quick-reference cheat sheet — 3 ready-to-speak "Say:" phrases in amber, the first thing the candidate sees |
+| **Main section** | Suggested answer with **bold key phrases** highlighted (blue underline + background glow) — numbers, company names, and achievements stand out for rapid scanning |
 | **Question display** | Shows detected question with question type badge (📖 Behavioral / ⚙️ Technical / etc.) |
 | **Confidence badge** | Colored indicator (🟢 High / 🟡 Medium / 🔴 Low) in the answer header |
-| **Coaching hints** | Collapsible "📌 Coaching Hints" section with 3-4 key talking points from the resume |
 | **Copy button** | 📋 One-click copy of the full answer text |
 | **Auto-scroll** | Both transcript and answer panels auto-scroll to latest content |
 | **Drag region** | Top bar — click and drag to reposition the window anywhere |
@@ -200,7 +206,7 @@ This is the AI quality engine — it ensures every answer sounds like a real hum
 
 #### 4.8.1 Question Type Detection
 
-When the interviewer asks a question, it's automatically classified into one of 5 types using ~50 regex patterns:
+When the interviewer asks a question, it's automatically classified into one of 5 types using **80+ regex patterns** (including implicit question patterns for commands and WH-words without `?`):
 
 | Type | Badge | Example Triggers | Result |
 |---|---|---|---|
@@ -229,7 +235,9 @@ Each question type sends **completely different instructions** to the LLM:
 - Vary sentence length — mix short punchy lines with longer explanations
 - **NEVER** use bullet points or numbered lists — speak in flowing paragraphs
 - Reference **specific details** from resume: project names, company names, technologies, team sizes, metrics
-- Keep answers 60-90 seconds of speaking time (~150-200 words)
+- **Bold key phrases** (`**text**`) — numbers, company names, and achievements are wrapped in bold for quick visual scanning
+- Use natural pauses (dashes, ellipses) and everyday language — avoid overly polished AI-sounding phrasing
+- **Strict word limits per question type** — enforced to prevent rambling
 - End with a concrete result, impact, or takeaway
 
 #### 4.8.3 Confidence Indicator
@@ -244,31 +252,32 @@ The LLM self-reports how confident it is based on how well the candidate's resum
 
 **How it works:** The LLM is instructed to prepend `[CONFIDENCE:high|medium|low]` to its response. The app parses this tag from the streamed response and displays it as a colored badge — the tag itself is stripped from the displayed answer.
 
-#### 4.8.4 Live Coaching Hints
+#### 4.8.4 Quick Phrases (Live Coaching Hints)
 
-Below each answer, a **collapsible section** shows 3-4 key talking points extracted from the resume.
+**Above** each answer, a **collapsible "🎯 Quick Phrases" section** shows 3 ready-to-speak phrases extracted from the resume. These are positioned as the **first thing the candidate sees** — a quick-reference cheat sheet.
 
 **Example output:**
 ```
-📌 Mention: AWS migration project → 40% cost reduction over 6 months
-📌 Led cross-functional team of 8 engineers
-📌 Used Terraform + GitHub Actions CI/CD for infrastructure automation
-📌 Resulted in 99.9% uptime SLA achievement
+💬 Say: "We migrated 150 microservices to AWS EKS and cut deployment time by 40%"
+💬 Say: "I led a cross-functional team of 8 engineers across 3 time zones"
+💬 Say: "That resulted in 99.9% uptime — the best quarter the team had"
 ```
 
-**Why this matters:** Instead of reading a full scripted answer (which sounds robotic), the candidate glances at 3-4 bullet points and weaves them into their own speaking style — resulting in a much more natural-sounding response.
+**Why this matters:** Instead of abstract notes like "Mention: AWS migration", the hints are **exact phrases the candidate can say out loud** — no mental translation needed during interview pressure.
 
-**How it works:** The LLM appends a `[HINTS]` section after the main answer. The app parses and strips this into a separate collapsible UI section with 📌 icons.
+**How it works:** The LLM appends a `[HINTS]` section with "Say:" prefixed phrases after the main answer. The app parses and strips this into a collapsible UI section **above the answer** with 💬 icons and amber styling.
 
 ---
 
 ### 4.9 UI Polish & Interaction
 
 #### Quick Action Buttons
-Inside the answer panel, three quick-action buttons allow instantaneous rewriting of the suggested answer:
-- **Make Shorter:** Condenses the answer to <45 seconds.
-- **Add Example:** Injects a concrete STAR example from the resume.
-- **Deep Dive:** Expands on technical details and trade-offs.
+Inside the answer panel, five quick-action buttons allow instantaneous rewriting of the suggested answer:
+- **⏱️ Shorter:** Condenses the answer to <45 seconds.
+- **💬 Simplify:** Rewrites using simpler, everyday vocabulary with short sentences (max 12 words each) — ideal for non-native speakers or when you need something easy to say out loud.
+- **➕ Example:** Injects a concrete STAR example from the resume.
+- **⚙️ Deep Dive:** Expands on technical details and trade-offs.
+- **🔄 Retry:** Regenerates the answer with a slightly different tone.
 
 #### Close Button
 Since the app uses a frameless window (no native title bar), a custom `×` button sits in the top-right corner. It uses `stopPropagation` on mouseDown to prevent the drag region from intercepting the click. Calls `appWindow.destroy()` for immediate termination.
@@ -291,17 +300,19 @@ Slider in Settings to control window transparency (10% to 100%).
 
 ### 4.10 Intelligent Question Debouncing
 
-A 2-second debounce prevents premature answer generation when the interviewer pauses mid-question.
+A **smart accumulating debounce** prevents premature answer generation while avoiding race conditions.
 
 | Scenario | Behavior |
 |---|---|
-| Interviewer says "Tell me about..." then pauses | Timer starts (2 seconds) |
-| Interviewer continues "...a time when you led a team" | Timer **resets** (2 seconds) |
-| 2 seconds of silence after "led a team" | ✅ Answer generation triggers with the **full** question |
-| Interviewer starts a completely new question | Previous timer cancelled, new timer starts |
+| Interviewer says "Tell me about..." then pauses | Sentence buffer accumulates, no timer yet |
+| Interviewer continues "...a time when you led a team" | Buffer appends, question detected on combined text |
+| 1.5 seconds of silence after final utterance | ✅ Answer generation triggers with the **full accumulated** question |
+| Same question detected with more words added | Timer **not reset** — this is a refinement, not a new question |
+| Interviewer starts a completely different question | Previous timer cancelled, new timer starts |
 
-**Without debounce:** The app would generate an irrelevant answer for "Tell me about" — a half-formed question.  
-**With debounce:** The app waits for the interviewer to finish speaking, then generates an answer for the complete, fully-formed question.
+**Two-layer detection:**
+1. **Sentence accumulation buffer** (in `useTranscription.ts`): Accumulates consecutive utterances from the same speaker and flushes on speaker change, 2.5s silence, or 5-utterance limit. Catches multi-sentence questions like *"We use React here. How would you handle state management?"*
+2. **Smart debounce** (in `App.tsx`): 1.5-second timer that only resets for substantially different questions — refinements of the same question keep the existing timer running.
 
 ---
 
@@ -459,15 +470,15 @@ graph TD
 | **Authentication/DB** | **Firebase** Auth & Firestore (Web SDK on frontend, Admin SDK on backend) |
 | **Payment Gateway** | **Razorpay** SDK + Node.js Webhooks |
 | **Audio capture** | Rust WASAPI loopback (Windows) |
-| **STT** | Deepgram WebSocket API (cloud) |
+| **STT** | Deepgram WebSocket API (cloud) — nova-2 model with optimized endpointing (400ms) and 1.8s utterance timeout |
 | **LLM** | OpenAI / Anthropic / Google Gemini / Groq API via REST streaming |
 | **HTTP networking** | `@tauri-apps/plugin-http` — routes all API calls through Rust backend, bypassing CORS |
 | **Resume parsing** | `pdfjs-dist` (PDF), `mammoth` (DOCX) — in-browser parsing |
 | **Data storage** | Tauri FS plugin — JSON files in `%APPDATA%/com.raj.talksync/` (settings.json + sessions/*.json) |
-| **Question detection** | Regex-based classifier (~50 patterns across 5 types) |
-| **Data storage** | Tauri FS plugin — JSON files in `%APPDATA%/com.raj.talksync/` (settings.json + sessions/*.json) |
-| **Question detection** | Regex-based classifier (~50 patterns across 5 types) |
-| **Response parsing** | Stream parser for `[CONFIDENCE:xxx]` and `[HINTS]` sections |
+| **Question detection** | Regex-based classifier (**80+ patterns** across 5 types + implicit question/command patterns) with sentence accumulation buffer |
+| **Interviewer ID** | Multi-signal scoring: question ratio (50%) + talk ratio (30%) + first-speaker (20%), re-evaluated every 5 entries |
+| **Response parsing** | Stream parser for `[CONFIDENCE:xxx]`, `**bold**` key phrases, and `[HINTS]` sections |
+| **Answer display** | Markdown bold → highlighted key-phrase spans, speaking time estimation (2.5 words/sec) |
 | **Practice Mode STT** | **Web Speech API** (Browser Native) — Zero-setup, online/offline (depends on OS), free. |
 
 ### 5.2 Key Technical Decisions
@@ -478,8 +489,10 @@ graph TD
 | **Deepgram over Google STT** | Lower latency streaming, better punctuation, simpler WebSocket API |
 | **Tauri HTTP plugin over fetch** | Browser `fetch()` from Tauri webview sends `Origin: tauri.localhost`, causing CORS rejections. Plugin routes through Rust — no CORS headers |
 | **Window capture exclusion** | Native OS API is the only reliable stealth method; CSS tricks don't work |
-| **Debounce over instant trigger** | 2-second debounce prevents generating answers for half-formed questions |
-| **LLM-embedded confidence** | Having the LLM self-report confidence within the same response avoids a second API call |
+| **Smart debounce over simple debounce** | ✅ 1.5-second timer that only resets for new questions — refinements keep existing timer. Combined with sentence accumulation buffer for multi-utterance capture |
+| **LLM-embedded confidence** | ✅ One API call for answer + confidence + hints — no extra latency |
+| **All-speaker question detection** | ✅ Safety net — detects questions from all speakers, not just identified interviewer, to prevent misses from wrong interviewer ID |
+| **Bold key-phrase formatting** | ✅ LLM wraps key numbers/names in `**bold**`, app parses to highlighted spans — enables glancing without reading |
 | **Web Speech API for Practice** | Zero dependency, no heavy binaries to ship, "just works" for simple dictation. |
 
 ---
@@ -563,16 +576,21 @@ flowchart TD
 | Session management (create/load/save/delete) | P1 | ✅ Done |
 | Global settings (API keys, provider, model) | P1 | ✅ Done |
 | Close button + translucent glassmorphism UI | P1 | ✅ Done |
-| Question type detection (5 types, ~50 patterns) | P1 | ✅ Done |
-| Per-type smart system prompt | P1 | ✅ Done |
+| Question type detection (5 types, ~80+ patterns) | P1 | ✅ Done |
+| Implicit question patterns (commands, WH-words) | P1 | ✅ Done (v2.7) |
+| Per-type smart system prompt (with word limits) | P1 | ✅ Done |
 | Confidence indicator (🟢🟡🔴) | P1 | ✅ Done |
-| Live coaching hints (3-4 resume talking points) | P1 | ✅ Done |
-| Intelligent question debouncing (2s) | P1 | ✅ Done |
-| Follow-up awareness (elaborate/tell me more) | P1 | ✅ Done |
-| **Advanced Techniques** (Corporate Strategy Rules) | P1 | ✅ Done |
+| Quick Phrases — "Say:" ready-to-speak hints above answer | P1 | ✅ Done (v2.7) |
+| Intelligent question debouncing (smart 1.5s) | P1 | ✅ Done |
+| Sentence accumulation buffer (multi-utterance capture) | P0 | ✅ Done (v2.7) |
+| Multi-signal interviewer identification | P0 | ✅ Done (v2.7) |
+| All-speaker question detection (safety net) | P1 | ✅ Done (v2.7) |
 | Follow-up awareness (elaborate/tell me more) | P1 | ✅ Done |
 | **Advanced Techniques** (Corporate Strategy Rules) | P1 | ✅ Done |
 | **Reverse Interviewing Logic** | P1 | ✅ Done |
+| **Scannable answer format** (bold key phrases) | P0 | ✅ Done (v2.7) |
+| **Speaking time estimate** (⏱ ~45s badge) | P1 | ✅ Done (v2.7) |
+| **Simplify quick action** (simpler vocabulary) | P1 | ✅ Done (v2.7) |
 | **Resume Gap Analysis** | P2 | ✅ Done |
 | **Practice Mode** (Mock View) | P2 | 🚧 Planned |
 | File-based data persistence (Tauri FS plugin) | P1 | ✅ Done |
@@ -658,7 +676,9 @@ gantt
 | LLM generates hallucinated experience | High | Medium | Ground answers strictly in resume; confidence indicator warns when answer is generic |
 | Interview platform detects audio capture | Medium | Low | Use OS-level loopback (not inject); no process hooking |
 | High API costs for frequent users | Medium | High | Offer local Whisper + local LLM (Ollama) mode for $0 cost |
-| Premature answer on partial questions | Medium | High | ✅ Solved — 2-second debounce waits for interviewer to finish speaking |
+| Premature answer on partial questions | Medium | ~~High~~ Low | ✅ Solved — sentence accumulation buffer + smart 1.5s debounce + Deepgram endpointing (400ms) |
+| Question capture miss rate (~25%) | High | ~~High~~ Low | ✅ Solved (v2.7) — multi-utterance buffer, implicit patterns, all-speaker detection, multi-signal interviewer ID |
+| Wall-of-text answers hard to scan live | Medium | ~~High~~ Low | ✅ Solved (v2.7) — structured format with bold key phrases, speaking time badge, hints above answer |
 
 ---
 

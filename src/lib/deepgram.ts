@@ -74,9 +74,11 @@ export class DeepgramClient {
       punctuate: 'true',
       diarize: 'true',           // Speaker diarization (P0 requirement)
       interim_results: 'true',   // Get partial results for faster display
-      utterance_end_ms: '1000',  // Detect end of utterance after 1s silence
+      utterance_end_ms: '1800',  // Detect end of utterance after 1.8s silence (interviewers pause more)
+      endpointing: '400',        // Prevents premature finalization of mid-phrase pauses
       vad_events: 'true',        // Voice activity detection
       smart_format: 'true',      // Better formatting
+      filler_words: 'true',      // Capture "um", "so" — signals interviewer is still talking
       encoding: 'linear16',
       sample_rate: '16000',
       channels: '1',
