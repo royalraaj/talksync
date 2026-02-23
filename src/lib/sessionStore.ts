@@ -32,6 +32,7 @@ export interface Session {
     resumeText: string;
     jobDescription: string;
     companyBrief: string;
+    additionalNotes: string;
     transcript: TranscriptLine[];
     answers: SavedAnswer[];
 }
@@ -174,6 +175,7 @@ export function createSession(data: {
     resumeText: string;
     jobDescription: string;
     companyBrief: string;
+    additionalNotes?: string;
 }): Session {
     const now = new Date().toISOString();
     // Auto-generate name from company/JD
@@ -195,6 +197,7 @@ export function createSession(data: {
         resumeText: data.resumeText,
         jobDescription: data.jobDescription,
         companyBrief: data.companyBrief,
+        additionalNotes: data.additionalNotes || '',
         transcript: [],
         answers: [],
     };

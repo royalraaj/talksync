@@ -51,6 +51,7 @@ export function useLLM(config: LLMConfig | null) {
         companyBrief: string,
         conversationEntries: ConversationEntry[],
         refinementInstruction?: string,
+        additionalNotes?: string,
     ) => {
         if (!config?.apiKey) {
             setError('No API key configured');
@@ -81,6 +82,7 @@ export function useLLM(config: LLMConfig | null) {
             resume,
             jobDescription,
             companyBrief,
+            additionalNotes,
             conversationHistory: buildConversationHistory(conversationEntries),
             currentQuestion: question,
             // If follow-up, inject previous Q&A so LLM can expand on it

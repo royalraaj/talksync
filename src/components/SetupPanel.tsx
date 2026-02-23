@@ -13,6 +13,7 @@ interface Props {
         resumeText?: string;
         jobDescription?: string;
         companyBrief?: string;
+        additionalNotes?: string;
     };
     onStart: (data: SessionData) => void;
     onBack: () => void;
@@ -22,12 +23,14 @@ export interface SessionData {
     resumeText: string;
     jobDescription: string;
     companyBrief: string;
+    additionalNotes: string;
 }
 
 const SetupPanel: React.FC<Props> = ({ settings, initialData, onStart, onBack }) => {
     const [resumeText, setResumeText] = useState(initialData?.resumeText || '');
     const [jobDescription, setJobDescription] = useState(initialData?.jobDescription || '');
     const [companyBrief, setCompanyBrief] = useState(initialData?.companyBrief || '');
+    const [additionalNotes, setAdditionalNotes] = useState(initialData?.additionalNotes || '');
     const [loading, setLoading] = useState(false);
     const [resumeFileName, setResumeFileName] = useState('');
     const [jdLoading, setJdLoading] = useState(false);
@@ -35,6 +38,8 @@ const SetupPanel: React.FC<Props> = ({ settings, initialData, onStart, onBack })
     const [companyName, setCompanyName] = useState('');
     const [companyLoading, setCompanyLoading] = useState(false);
     const [companyFileName, setCompanyFileName] = useState('');
+    const [notesLoading, setNotesLoading] = useState(false);
+    const [notesFileName, setNotesFileName] = useState('');
     const [gapResult, setGapResult] = useState<GapAnalysisResult | null>(null);
     const [gapLoading, setGapLoading] = useState(false);
     const [gapError, setGapError] = useState('');
@@ -82,6 +87,21 @@ const SetupPanel: React.FC<Props> = ({ settings, initialData, onStart, onBack })
             alert(`Failed to parse file: ${err}`);
         } finally {
             setCompanyLoading(false);
+        }
+    };
+
+    const handleNotesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setNotesLoading(true);
+        setNotesFileName(file.name);
+        try {
+            const text = await extractText(file);
+            setAdditionalNotes(text);
+        } catch (err) {
+            alert(`Failed to parse file: ${err}`);
+        } finally {
+            setNotesLoading(false);
         }
     };
 
@@ -146,7 +166,7 @@ const SetupPanel: React.FC<Props> = ({ settings, initialData, onStart, onBack })
             alert('Please upload your resume or paste the text');
             return;
         }
-        onStart({ resumeText, jobDescription, companyBrief });
+        onStart({ resumeText, jobDescription, companyBrief, additionalNotes });
     };
 
     if (isPracticeMode) {
@@ -249,6 +269,29 @@ const SetupPanel: React.FC<Props> = ({ settings, initialData, onStart, onBack })
                         placeholder="Or paste company info here... (auto-filled when fetched)"
                         value={companyBrief}
                         onChange={(e) => setCompanyBrief(e.target.value)}
+                        rows={3}
+                    />
+                </div>
+
+                <div className="form-section">
+                    <label className="form-label">📝 Additional Notes <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', fontWeight: 'normal' }}>(Optional)</span></label>
+                    <div className="file-upload">
+                        <input
+                            type="file"
+                            accept=".pdf,.docx,.doc,.txt"
+                            onChange={handleNotesUpload}
+                            id="notes-upload"
+                            hidden
+                        />
+                        <label htmlFor="notes-upload" className="upload-btn">
+                            {notesLoading ? '⏳ Parsing...' : notesFileName || 'Upload PDF / DOCX / TXT'}
+                        </label>
+                    </div>
+                    <textarea
+                        className="form-textarea"
+                        placeholder="Paste any extra info here — prepared questions, key talking points, project details, things you want to highlight..."
+                        value={additionalNotes}
+                        onChange={(e) => setAdditionalNotes(e.target.value)}
                         rows={3}
                     />
                 </div>

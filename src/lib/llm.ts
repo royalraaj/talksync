@@ -16,6 +16,7 @@ export interface LLMContext {
     resume: string;
     jobDescription: string;
     companyBrief: string;
+    additionalNotes?: string;
     conversationHistory: string;
     currentQuestion: string;
     previousQA?: { question: string; answer: string };
@@ -96,6 +97,9 @@ function buildUserMessage(context: LLMContext): string {
     }
     if (context.companyBrief) {
         msg += `## COMPANY INFO\n${context.companyBrief}\n\n`;
+    }
+    if (context.additionalNotes) {
+        msg += `## ADDITIONAL NOTES & PREPARED INFORMATION\nThe candidate has provided the following extra context. Use this to enrich your answers when relevant:\n${context.additionalNotes}\n\n`;
     }
     if (context.conversationHistory) {
         msg += `## CONVERSATION SO FAR\n${context.conversationHistory}\n\n`;

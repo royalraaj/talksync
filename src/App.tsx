@@ -100,7 +100,9 @@ function App() {
           activeSession.resumeText,
           activeSession.jobDescription,
           activeSession.companyBrief,
-          getConversationHistory()
+          getConversationHistory(),
+          undefined,
+          activeSession.additionalNotes
         );
       }, 2000);
     }
@@ -285,7 +287,8 @@ function App() {
       activeSession.jobDescription,
       activeSession.companyBrief,
       getConversationHistory(),
-      instruction // Pass refinement
+      instruction, // Pass refinement
+      activeSession.additionalNotes
     );
   }, [detectedQuestion, activeSession, getConversationHistory, generateAnswer]);
 
@@ -363,6 +366,7 @@ function App() {
             resumeText: activeSession.resumeText,
             jobDescription: activeSession.jobDescription,
             companyBrief: activeSession.companyBrief,
+            additionalNotes: activeSession.additionalNotes,
           } : undefined}
           onStart={handleStartSession}
           onBack={() => { setActiveSession(null); setMode('home'); }}
